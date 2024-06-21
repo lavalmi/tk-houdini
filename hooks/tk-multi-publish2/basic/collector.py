@@ -23,6 +23,7 @@ _HOUDINI_OUTPUTS = {
         "ifd": "vm_picture",  # mantra render node
         "opengl": "picture",  # opengl render
         "wren": "wr_picture",  # wren wireframe
+        "filmboxfbx": "sopoutput",
     },
 }
 
@@ -88,10 +89,12 @@ class HoudiniSessionCollector(HookBaseClass):
         # remember if we collect any alembic/mantra nodes
         self._alembic_nodes_collected = False
         self._mantra_nodes_collected = False
+        self._fbx_nodes_collected = False
 
         # methods to collect tk alembic/mantra nodes if the app is installed
         self.collect_tk_alembicnodes(item)
         self.collect_tk_mantranodes(item)
+        self.collect_tk_fbxnodes(item)
 
         # collect other, non-toolkit outputs to present for publishing
         self.collect_node_outputs(item)
@@ -170,6 +173,12 @@ class HoudiniSessionCollector(HookBaseClass):
                     )
                     continue
 
+                if node_type == "filmboxfbx" and self._fbx_nodes_collected:
+                    self.logger.debug(
+                        "Some Text, i dont know what to describe so lalalala "
+                    )
+                    continue
+
                 path_parm_name = _HOUDINI_OUTPUTS[node_category][node_type]
 
                 # get all the nodes for the category and type
@@ -207,6 +216,9 @@ class HoudiniSessionCollector(HookBaseClass):
         item for each one with an output on disk.
 
         :param parent_item: The item to parent new items to.
+
+        Will find a Shotgun Alembic. Type is "sgtk_alembic"
+
         """
 
         publisher = self.parent
@@ -221,7 +233,12 @@ class HoudiniSessionCollector(HookBaseClass):
             return
 
         try:
-            tk_alembic_nodes = alembicnode_app.get_nodes()
+
+            #tk_alembic_nodes = alembicnode_app.get_nodes()
+            # Find alembic nodes. ! NOT sgtk_alembic
+            # alembicnode_app.get_nodes() will return all sgtk_alembic nodes
+
+            tk_alembic_nodes = self.__get_houdini_nodes("alembic")
         except AttributeError:
             self.logger.warning(
                 "Unable to query the session for tk-houdini-alembicnode "
@@ -239,6 +256,9 @@ class HoudiniSessionCollector(HookBaseClass):
 
             out_path = alembicnode_app.get_output_path(node)
 
+            # out_path = node.parm("fileName").eval()
+            # print(out_path)
+
             if not os.path.exists(out_path):
                 continue
 
@@ -253,12 +273,69 @@ class HoudiniSessionCollector(HookBaseClass):
             # the item has been created. update the display name to
             # include the node path to make it clear to the user how it
             # was collected within the current session.
+
+            # item.name = f"{item.name} ({node.path()})"
+            # item.properties["path"] = out_path
+
             item.name = "%s (%s)" % (item.name, node.path())
 
             if work_template:
                 item.properties["work_template"] = work_template
 
             self._alembic_nodes_collected = True
+
+    def collect_tk_fbxnodes(self, parent_item):
+        nodes = self.__get_houdini_nodes("filmboxfbx")
+        print("nodes", nodes)
+        # iterate over each node
+
+        for node in nodes:
+            # get the evaluated path parm value
+            path = node.parm("sopoutput").eval()
+
+            # ensure the output path exists
+            # if not os.path.exists(path):
+            #     continue
+
+            self.logger.info(
+                "Processing %s node: %s" % ("node_type FBX", node.path())
+            )
+
+            # allow the base class to collect and create the item. it
+            # should know how to handle the output path
+            item = super(HoudiniSessionCollector, self)._collect_file(
+                parent_item, path, frame_sequence=True
+            )
+
+            # the item has been created. update the display name to
+            # include the node path to make it clear to the user how it
+            # was collected within the current session.
+            item.name = "%s (%s)" % (item.name, node.path())
+
+            # create the session item for the publish hierarchy
+            session_item = parent_item.create_item(
+                "houdini.session.item", "fbx_item", node
+            )
+
+    @staticmethod
+    def __get_houdini_nodes(node_type):
+        # Get the root node
+        root = hou.node('/')
+
+        founded_nodes = []
+
+        def find_nodes(node):
+            if node.type().name() == node_type:
+                founded_nodes.append(node)
+
+            # Recursively search the child nodes
+            for child in node.children():
+                find_nodes(child)
+
+        # Start the search from the root node
+        find_nodes(root)
+
+        return founded_nodes
 
     def collect_tk_mantranodes(self, parent_item):
         """
