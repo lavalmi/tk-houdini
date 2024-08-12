@@ -19,6 +19,7 @@ import shutil
 import time
 
 import sgtk
+import sgtk.platform as sgtk_platform
 
 import hou
 
@@ -792,7 +793,7 @@ class HoudiniEngine(sgtk.platform.Engine):
         :param widget: A QWidget instance to be embedded in the newly created dialog.
         :param parent: The parent QWidget for the dialog
         """
-
+        self.create_env_var_hou()
         from sgtk.platform.qt import QtCore
 
         # call the base implementation to create the dialog:
@@ -922,6 +923,28 @@ class HoudiniEngine(sgtk.platform.Engine):
             ctypes.windll.user32.SetActiveWindow(hwnd)
 
         return dialog
+
+    @staticmethod
+    def create_env_var_hou():
+        engine = sgtk_platform.current_engine()
+        engine_tk = engine.name
+        if engine_tk == 'tk-houdini':
+            # TODO Extract this to the top of file.
+            # This is a temporary solution. Because Context for Maya and Houdini are separated.
+            if "hou" in globals():
+                result = hou.hscript("set -g")[0]
+                variables = result.splitlines()
+                exist = False
+                for var in variables:
+                    # each var has look like this 'VAR      '. It has a lot of spaces
+                    if 'JOB' in var.replace(' ', ''):
+                        exist = True
+                if not exist:
+                    hou.hscript("set -g JOB = C:/Program Files/Shotgun")
+
+                    # To delete those variables from (Edit -> Aliases and Variables <Your Varaible>)
+                    # use Textport -> how to start Textport - > in window "Aliases and Variables"
+                    # and run command ::  set -u MY_VAR
 
     def show_modal(self, title, bundle, widget_class, *args, **kwargs):
         """
