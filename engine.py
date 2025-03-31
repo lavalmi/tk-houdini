@@ -84,12 +84,16 @@ class HoudiniEngine(sgtk.platform.Engine):
 
         if self._houdini_version[0] >= 15:
             # In houdini 15+, we can use the dynamic menus and shelf api to
-            # properly handle cases where a file is loaded outside of a SG
+            # properly handle cases where a file is loaded outside of a PTR
             # context. Make sure the timer that looks for current file changes
             # is running.
             tk_houdini = self.import_module("tk_houdini")
             if self.get_setting("automatic_context_switch", True):
                 tk_houdini.ensure_file_change_timer_running()
+
+        self._menu_name = "Flow Production Tracking"
+        if self.get_setting("use_short_menu_name", False):
+            self._menu_name = "FPTR"
 
     def post_app_init(self):
         """
@@ -278,11 +282,11 @@ class HoudiniEngine(sgtk.platform.Engine):
             # dismiss the dialog to unblock it.
             def run_when_idle():
                 hou.ui.displayMessage(
-                    text="Houdini 18 versions older than 18.0.348 are unstable when using SG "
-                    "Toolkit. Be aware that Houdini crashes may occur if attempting to use "
-                    "Toolkit apps from your current Houdini session. SG recommends updating "
-                    "Houdini to 18.0.348 or newer.",
-                    title="SG Toolkit",
+                    text="Houdini 18 versions older than 18.0.348 are unstable when using "
+                    "Flow Production Tracking. Be aware that Houdini crashes may "
+                    "occur if attempting to use Toolkit apps from your current Houdini "
+                    "session. PTR recommends updating Houdini to 18.0.348 or newer.",
+                    title="Flow Production Tracking",
                     severity=hou.severityType.Warning,
                 )
 
@@ -359,7 +363,7 @@ class HoudiniEngine(sgtk.platform.Engine):
 
         """
 
-        for (panel_id, panel_dict) in self.panels.items():
+        for panel_id, panel_dict in self.panels.items():
             if not panel_id == requested_panel_id:
                 continue
 
@@ -653,7 +657,7 @@ class HoudiniEngine(sgtk.platform.Engine):
         # Build a dictionary mapping app instance names to dictionaries of
         # commands they registered with the engine.
         app_instance_commands = {}
-        for (cmd_name, value) in self.commands.items():
+        for cmd_name, value in self.commands.items():
             app_instance = value["properties"].get("app")
             if app_instance:
                 # Add entry 'command name: command function' to the command
@@ -688,7 +692,7 @@ class HoudiniEngine(sgtk.platform.Engine):
             else:
                 if not setting_cmd_name:
                     # add commands to the list for the given app instance.
-                    for (cmd_name, cmd_function) in cmd_dict.items():
+                    for cmd_name, cmd_function in cmd_dict.items():
                         self.log_debug(
                             "%s startup running app '%s' command '%s'."
                             % (self.name, app_instance_name, cmd_name)
@@ -738,7 +742,7 @@ class HoudiniEngine(sgtk.platform.Engine):
                 if self._get_dialog_parent() is None or not parent_window.isVisible():
                     return
 
-            for (cmd_name, command) in commands_to_run:
+            for cmd_name, command in commands_to_run:
                 # iterate over all the commands and execute them.
                 self.log_debug("Executing startup command: %s" % (cmd_name,))
                 command()

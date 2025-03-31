@@ -18,7 +18,7 @@ import traceback
 # constants defining environment variables used during bootstrap
 
 # Name of the env variable that stores the temp directory where .xml files are
-# written to defined menus, shelves and python panels for the SG integration.
+# written to defined menus, shelves and python panels for the PTR integration.
 g_temp_env = "TK_HOUDINI_TMP"
 
 # Name of the env variable that stores the serialized context used durring
@@ -86,9 +86,9 @@ def bootstrap_classic():
         context = sgtk.context.deserialize(os.environ.get(g_sgtk_context_env))
     except Exception as e:
         bootstrap_exception(
-            "Toolkit bootstrap failed to extract the current context from the "
-            "environment! The SG integration will be disabled. Details: "
-            "%s" % (e,)
+            "Flow Production Tracking Toolkit bootstrap failed to extract the "
+            "current context from the environment! The PTR integration will be "
+            "disabled. Details: %s" % (e,)
         )
         return
 
@@ -139,7 +139,7 @@ def get_classic_startup_env():
 
     # Add the classic startup directory for the engine (2 levels up from this
     # file). This directory, in the engine root, includes the pythonrc.py files
-    # within python2.6libs and python2.7libs directories once on HOUDINI_PATH,
+    # within pythonX.Xlibs directories once on HOUDINI_PATH,
     # houdini will execute the appropriate file at startup
     startup_path = os.path.join(
         os.path.dirname(__file__), "..", "..", "classic_startup"
